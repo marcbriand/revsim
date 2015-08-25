@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="jar-ext">
+    <property name="src.dir" value="src"/>
+    <property name="dist.dir" value="dist"/>
+	<property name="dist.classes" value = "${dist.dir}/classes"/>
+    
+    <target name="compile-src" description="compiles src folder to src class folder">
+    	<mkdir dir="${dist.classes}"/>
+    	
+    	<javac srcdir="${src.dir}" destdir="${dist.classes}" debug="true">
+    	</javac>
+    </target>
+	
+	<target name="jar-ext" description="jars src classes for external use"
+	 depends="compile-src">
+		<delete file="${dist.dir}/Revsim.jar"/>
+		<jar basedir="${dist.classes}" destfile="${dist.dir}/Revsim.jar">
+		</jar>
+	</target>
+</project>

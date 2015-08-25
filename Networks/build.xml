@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="jar">
+	
+	<property name="revsim.jar" value="../Revsim/dist/Revsim.jar"/>
+	<property name="lib.dir" value="lib"/>
+	<property name="src.dir" value="src"/>
+	<property name="dist.dir" value="dist"/>
+	<property name="dist.classes" value="${dist.dir}/classes"/>
+	
+	<target name="copy-revsim-jar" description="get Revsim jar">
+		<copy file="${revsim.jar}" tofile="${lib.dir}/Revsim.jar" overwrite="true"/>
+	</target>
+	
+	<target name="clean" description="cleans jar and class files">
+		<delete file="usersim.jar"/>
+		<delete>
+			<fileset dir="${dist.classes}" includes="**/*"/>
+		</delete>
+	</target>
+	
+	<target name="compile" depends="copy-revsim-jar">
+		<mkdir dir="${dist.classes}"/>
+		
+		<javac srcdir="${src.dir}" destdir="${dist.classes}" debug="true">
+			<classpath path="${lib.dir}/Revsim.jar" />
+			<classpath path="${lib.dir}/gson-2.3.1.jar" />
+	    </javac>
+	</target>
+	
+	<target name="jar" depends="clean, compile">
+		<delete file="usersim.jar"/>
+		<jar basedir="${dist.classes}" destfile="usersim.jar"/>
+	</target>
+</project>
