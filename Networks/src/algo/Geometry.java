@@ -598,11 +598,12 @@ public class Geometry {
     
     private static boolean touchesASegment(Node a1, Node a2, List<NetworkModel.Segment> segments, NetworkModel nm) {
     	for (NetworkModel.Segment s : segments) {
-    		if (isSegment(s, 2, 3)) {
-    			System.out.println("foo");
-    		}
     		Node b1 = nm.getNode(s.a);
     		Node b2 = nm.getNode(s.b);
+    		if (Geometry.isIdPair(a1, a2, 13, 88)) {
+    			if (Geometry.isSegment(s, 1, 6))
+    				System.out.println("hoo");
+    		}
     		if (doIntersect2(a1, a2, b1, b2))
     			return true;
     		if (areColinear(a1, a2, b1, b2))
@@ -726,7 +727,7 @@ public class Geometry {
     	b.addNeighbor(a.getId());     
     }
    
-    public static NetworkModel generateFirstNeighbors(NetworkModel nm) {
+    public static NetworkModel generateFirstNeighbors(NetworkModel nm, long framecount) {
     	NetworkModel.NewAndSourceNodes nsn = nm.getNewAndSourceNodes();
     	if (nsn.newNodes.isEmpty())
     		return nm;
@@ -741,11 +742,10 @@ public class Geometry {
     	double maxVariance = 0.1*avgAngle;
     	for (int i = 0; i < numSpokes; i++) {
     		double angle = genAngle(i*avgAngle, maxVariance, r);
-    		double length = gb.maxDistance*r.nextDouble();
+    		double length = Util.doubleBetween(gb.minDistance, gb.maxDistance, r);
     		int newX = firstNode.getX() + (int)(Math.cos(angle)*length);
     		int newY = firstNode.getY() + (int)(Math.sin(angle)*length);
-    		Node newNode = new Node();
-    		newNode.setId(i+1);
+    		Node newNode = new Node(i+1, framecount, nm);
     		newNode.setX(newX);
     		newNode.setY(newY);
     		nm.addNewAndSourceNode(newNode, firstNode);
@@ -754,6 +754,42 @@ public class Geometry {
     	}
     	
     	return nm;
+    }
+    
+    public static NetworkModel generateFirstNeighbors2(NetworkModel nm, long framecount) {
+    	NetworkModel.NewAndSourceNodes nsn = nm.getNewAndSourceNodes();
+    	if (nsn.newNodes.isEmpty())
+    		return nm;
+    	
+    	List<Node> firstNodes = nsn.newNodes;
+    	
+    	nm.clearNewAndSourceNodes();
+    	
+    	NetworkModel.GenerateBuilder gb = nm.getGenerateBuilder();
+    	Random r = nm.getRandom();
+    	
+    	for (Node firstNode : firstNodes) {
+    	
+    	    int numSpokes = Geometry.pickBetween(4, gb.maxEdgesPerNode, true, r);
+    	    double avgAngle = 2.0*Math.PI/numSpokes;
+    	    double maxVariance = 0.1*avgAngle;
+    	    for (int i = 0; i < numSpokes; i++) {
+    		    double angle = genAngle(i*avgAngle, maxVariance, r);
+    		    double length = Util.doubleBetween(gb.minDistance, gb.maxDistance, r);
+    		    int newX = firstNode.getX() + (int)(Math.cos(angle)*length);
+    		    int newY = firstNode.getY() + (int)(Math.sin(angle)*length);
+    		    Node newNode = new Node(nm.getNextId(), framecount, nm);
+    		    newNode.setX(newX);
+    		    newNode.setY(newY);
+    		    nm.addNewAndSourceNode(newNode, firstNode);
+    		    nm.addNewSegment(newNode, firstNode);
+    		    linkNodes(firstNode, newNode);
+    	    }
+    	
+    	}
+    	
+    	return nm;
+    	
     }
     
     private static int findNumNewNeighbors(Node newNode, NetworkModel nm) {
@@ -933,7 +969,12 @@ public class Geometry {
     	return low*(1.0 - f) + f*high;
     }
     
-    private static void generateUnconnectedNeighbors(Node node, NetworkModel.RegionCell rc, double gradAngle, int numToGen, NetworkModel nm) {
+    private static void generateUnconnectedNeighbors(Node node, 
+    		                                         NetworkModel.RegionCell rc, 
+    		                                         double gradAngle, 
+    		                                         int numToGen, 
+    		                                         NetworkModel nm,
+    		                                         long framecount) {
     	if (numToGen <= 0)
     		return;
     	Random r = nm.getRandom();
@@ -946,26 +987,24 @@ public class Geometry {
     	int minCol = Math.max(rc.col-1, 0);
     	int maxCol = Math.min(rc.col+1, nm.getGenerateBuilder().numRegionCols-1);
 
-    	int id = nm.getNumNodes();
+    	int id = nm.getNextId();
     	
     	for (int i = 0; i < numToGen; i++) {
     		double angleVar = r.nextDouble()*maxVariance;
     		double angle = startAngle + i*avgAngle + angleVar;
     		double maxLength = nm.getGenerateBuilder().maxDistance;
-    		double length = randPickDoubleBetween(0.25*maxLength, maxLength, r);
+    		double minLength = nm.getGenerateBuilder().minDistance;
+   // 		double length = randPickDoubleBetween(0.25*maxLength, maxLength, r);
+    		double length = Util.doubleBetween(minLength, maxLength, r);
     		boolean ok = true;
     		Node newNode = null;
     		for (int j = 0; j < 4; j++) {
     			ok = true;
     			int x = node.getX() + (int)(length*Math.cos(angle));
     			int y = node.getY() + (int)(length*Math.sin(angle));
-    			newNode = new Node();
-    			newNode.setId(id);
+    			newNode = new Node(id, framecount, nm);
     			newNode.setX(x);
     			newNode.setY(y);
-    			if (isIdPair(node, newNode, 16, 75)) {
-    				System.out.println("goo");
-    			}
     			for (int m = minRow; m <= maxRow; m++) {
     				for (int n = minCol; n <= maxCol; n++) {
     					List<NetworkModel.Segment> segments = nm.getGenerateBuilder().segmentRegions[m][n];
@@ -979,18 +1018,20 @@ public class Geometry {
     				if (!ok)
     					break;
     			}
+    			if (length < minLength)
+    				break;
     		}
     		if (newNode != null) {
     			nm.addNewAndSourceNode(newNode, node);
     			NetworkModel.linkNodes(node, newNode);
     			nm.addNewSegment(newNode, node);
-    			id++;
+    			id = nm.getNextId();
     		}
     		
     	}
     }
     
-    private static void generateNeighbors(Node newNode, Node srcNode, NetworkModel nm) {
+    private static void generateNeighbors(Node newNode, Node srcNode, NetworkModel nm, long framecount) {
     	NetworkModel.RegionCell rc = nm.getGenerateBuilder().findRegionCell(newNode);
     	if (!rc.valid)
     		return;
@@ -1004,18 +1045,19 @@ public class Geometry {
     	int numConn = Geometry.addConnectionsAround(newNode, nearbyNodes, rc, startAngle, maxToFind, nm);
     	
     	int maxToGenerate = nm.getGenerateBuilder().maxEdgesPerNode - numConn - currentNumNeighbors;
-    	Geometry.generateUnconnectedNeighbors(newNode, rc, gradAngle, maxToGenerate, nm);
+    	Geometry.generateUnconnectedNeighbors(newNode, rc, gradAngle, maxToGenerate, nm, framecount);
     	
     }
     
-    public static NetworkModel generateNeighbors(NetworkModel nm) {
+    public static NetworkModel generateNeighbors(NetworkModel nm, long framecount) {
     	NetworkModel.NewAndSourceNodes nsn = nm.getNewAndSourceNodes();
     	nm.clearNewAndSourceNodes();
     	nm.clearNewSegments();
     	for (int i = 0; i < nsn.newNodes.size(); i++) {
     		Node newNode = nsn.newNodes.get(i);
     		Node srcNode = nsn.srcNodes.get(i);
-    		generateNeighbors(newNode, srcNode, nm);
+    		if (newNode.getDensity() < nm.getMaxDensity())
+    		    generateNeighbors(newNode, srcNode, nm, framecount);
     	}
     	return nm;
     }
@@ -1024,7 +1066,8 @@ public class Geometry {
 		double dx = 0.0;
 		double dy = 0.0;
 
-		for (int i = 0; i < nm.getNumNodes(); i++) {
+		Set<Integer> keys = nm.getNodeKeys();
+		for (Integer i : keys) {
 			Node other = nm.getNode(i);
 			if (other.getId() == n.getId())
 				continue;

@@ -24,13 +24,10 @@ public class Propagation {
 	}
 	
 	public static List<Node> doOverNodes(NetworkModel nm, List<Node> nodes, IPropAlgorithm alg) {
-		System.out.println("------");
-		System.out.println("doOverNodes, starting with " + nodes.size() + " nodes");
 		List<Node> tempNewNodes = new ArrayList<Node>();
 		for (Node node : nodes) {
 			alg.process(node, nm, tempNewNodes);
 		}
-		System.out.println("..returning " + tempNewNodes.size() + " new nodes");
 		return tempNewNodes;
 	}
 }

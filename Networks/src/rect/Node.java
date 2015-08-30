@@ -12,14 +12,25 @@ public class Node {
 	private int id;
     private int x;
     private int y;
+    private long birthday;
     private List<Integer> neighbors = new ArrayList<Integer>();
     private Map<String, DProp> props = new HashMap<String, DProp>();
+    private double density;
+    NetworkModel nm;
+    
+    public Node (int id, long birthday, NetworkModel nm) {
+    	this.id = id;
+    	this.birthday = birthday;
+    	this.nm = nm;
+    	
+    	density = 1.0;
+    }
     
     public Node duplicate() {
-    	Node ret = new Node();
-    	ret.id = id;
+    	Node ret = new Node(id, birthday, nm);
     	ret.x = x;
     	ret.y = y;
+    	ret.density = density;
     	ret.neighbors = new ArrayList<Integer>();
     	for (int i = 0; i < neighbors.size(); i++) {
     		ret.neighbors.add(neighbors.get(i));
@@ -31,6 +42,33 @@ public class Node {
     	}
     	ret.props = newProps;
     	return ret;
+    }
+    
+    void calcDensity() {
+    	double d = 1.0;
+    	for (Integer i : neighbors) {
+    		Node nb = nm.getNode(i);
+    		if (nb != null) {
+    			int diffx = nb.getX() - x;
+    			int diffy = nb.getY() - y;
+    			double dsq = diffx*diffx + diffy*diffy;
+                double factor = 1.0 - dsq/nm.getGenerateBuilder().maxDistanceSquared;
+                factor = Math.max(0.0, factor);
+                d += factor;
+    		}
+    	}
+    	density = d;
+    }
+    
+    void calcDensity2() {
+    	double d = 1.0;
+    	for (Integer i : neighbors) {
+    		Node nb = nm.getNode(i);
+    		d += 0.5;
+    		int numNeighborNeighbors = nb.getNeighbors().size() - 1; // don't count self
+    		d += 0.25*numNeighborNeighbors;
+    	}
+    	density = d;
     }
 
 	public int getId() {
@@ -67,8 +105,27 @@ public class Node {
 	
 	public void addNeighbor(int neighbor) {
 		neighbors.add(neighbor);
+		calcDensity2();
 	}
 	
+	public void removeNeighbor(int neighbor) {
+		List<Integer> temp = new ArrayList<Integer>();
+		for (Integer i : neighbors) {
+			if (i != neighbor)
+				temp.add(i);
+		}
+		neighbors = temp;
+		calcDensity2();
+	}
+	
+	public double getDensity() {
+		return density;
+	}
+
+	public void setDensity(double density) {
+		this.density = density;
+	}
+
 	public boolean hasProp(String propName) {
 		return props.get(propName) != null;
 	}
@@ -87,5 +144,13 @@ public class Node {
 	
 	public void removeProp(String propName) {
 		props.remove(propName);
+	}
+
+	public long getBirthday() {
+		return birthday;
+	}
+
+	public void setBirthday(long birthday) {
+		this.birthday = birthday;
 	}
 }

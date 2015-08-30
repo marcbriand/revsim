@@ -281,5 +281,18 @@ public abstract class ConfigObject {
 			return null;
 		}
 	}
+	
+	protected int getFloatAsInt(String name, Object obj) throws ConfigException {
+		if (obj == null)
+			throw new ConfigException("null value passed for int '" + name + "'");
+		if (obj instanceof Float) {
+			Float fobj = (Float)obj;
+			return fobj.intValue();
+		}
+		else
+			throw new ConfigException("'" + name + "' was not a number");
+		
+	}
+
 
 }

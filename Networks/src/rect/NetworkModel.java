@@ -2,15 +2,28 @@ package rect;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 import config.NetworkConfig;
+import config.Point2DConfig;
 import revsim.mvc.Model;
 
 public class NetworkModel implements Model {
+	
+	NetworkConfig nc = new NetworkConfig();
+	
+	private int nextId = 0;
+	
+	public int getNextId() {
+		if (nextId < nodes.keySet().size())
+			nextId = nodes.keySet().size();
+		return nextId++;
+	}
 	
 	public static class RegionCell
 	{
@@ -147,19 +160,23 @@ public class NetworkModel implements Model {
 		public int numRegionCols = 0;
 		public int width = 0;
 		public int height = 0;
+		public int minEdgesPerNode = 0;
 		public int maxEdgesPerNode = 0;
 		public double maxDistance = 0.0;
+		public double minDistance = 0.0;
 		public double maxDistanceSquared = 0.0;
 		public double regionFactor = 0.0;
 //		public List<Segment> segments = new ArrayList<Segment>();
 		
-		public GenerateBuilder setDimensions(int width, int height, double maxD) {
+		public GenerateBuilder setDimensions(int width, int height, double minD, double maxD) {
 			this.width = width;
 			this.height = height;
+			minDistance = minD;
 			maxDistance = maxD;
 			maxDistanceSquared = maxD*maxD;
 			// 1.5 squares = maxD
-			double squareSide = 0.5*maxD;
+//			double squareSide = 0.5*maxD;
+			double squareSide = 1.1*maxD;
 			numRegionRows = (int)(((double)height)/squareSide) + 1;
 			numRegionCols = (int)(((double)width)/squareSide) + 1;
 			//
@@ -205,6 +222,27 @@ public class NetworkModel implements Model {
 			List<Integer> nl = nodeRegions[rc.row][rc.col];
 			if (!nl.contains(n.getId()))
 			   nl.add(n.getId());
+		}
+		
+		public void removeNode(Node n) {
+			for (int i = 0; i < numRegionRows; i++)
+				for (int j = 0; j < numRegionCols; j++) {
+					List<Segment> segs = segmentRegions[i][j];
+					List<Segment> culledSegs = new ArrayList<Segment>();
+					for (Segment s : segs) {
+						if (s.a != n.getId() && s.b != n.getId())
+							culledSegs.add(s);
+					}
+					segmentRegions[i][j] = culledSegs;
+					
+					List<Integer> nodes = nodeRegions[i][j];
+					List<Integer> culledNodes = new ArrayList<Integer>();
+					for (Integer k : nodes) {
+						if (k != n.getId())
+							culledNodes.add(k);
+					}
+					nodeRegions[i][j] = culledNodes;
+				}
 		}
 		
 		
@@ -266,7 +304,7 @@ public class NetworkModel implements Model {
     
     public void addNewAndSourceNode(Node newNode, Node srcNode) {
     	if (newNode.getId() != 0)
-    	   nodes.add(newNode);
+    	   nodes.put(newNode.getId(), newNode);
     	nsn.addNewAndSourceNodes(newNode, srcNode);
     	if (srcNode != null && newNode != null)
     	   gb.addSegment(srcNode, newNode);
@@ -287,15 +325,17 @@ public class NetworkModel implements Model {
 		return diffx*diffx + diffy*diffy;
 	}
 	
-	Node findNearNode(Node node, List<Integer> takenIds, long maxDistanceSquared, Random r)
+	Node findNearNode(Node node, List<Integer> nodeKeyList, List<Integer> takenIds, long maxDistanceSquared, Random r)
 	{
 		Set<Integer> tried = new HashSet<Integer>();
-		while (tried.size() < nodes.size()){
-			int i = r.nextInt(nodes.size());
+		int keyListSize = nodeKeyList.size();
+		while (tried.size() < keyListSize){
+			int i = r.nextInt(keyListSize);
 			if (tried.contains(i))
 				continue;
 			tried.add(i);
-			Node existingNode = nodes.get(i);
+			Integer key = nodeKeyList.get(i);
+			Node existingNode = nodes.get(key);
 			if (takenIds.contains(existingNode.getId()))
 				continue;
 			long distSq = calcDistanceSquared(node, existingNode);
@@ -307,12 +347,12 @@ public class NetworkModel implements Model {
 		return null;
 	}
 	
-	private void linkInNode(Node node, int width, int height, int maxEdgesPerNode, 
+	private void linkInNode(Node node, List<Integer> nodeKeyList, int width, int height, int maxEdgesPerNode, 
 			                long maxDistanceSquared, Random r) {
 		int numEdges = 1 + r.nextInt(maxEdgesPerNode-1);
 		List<Integer> takenIds = new ArrayList<Integer>();
 		for (int i = 0; i < numEdges; i++) {
-			Node neighborNode = findNearNode(node, takenIds, maxDistanceSquared, r);
+			Node neighborNode = findNearNode(node, nodeKeyList, takenIds, maxDistanceSquared, r);
 			if (neighborNode == null) {
 				return;
 			}
@@ -321,7 +361,17 @@ public class NetworkModel implements Model {
 		}		
 	}
 	
-	public void generateNodes(int width, int height, int numNodes, int maxEdgesPerNode, int seed)
+	private void unlinkNode(Node n) {
+		for (Integer i : n.getNeighbors()) {
+			Node nb = nodes.get(i);
+			if (nb != null) {
+				nb.removeNeighbor(n.getId());
+				n.removeNeighbor(nb.getId());
+			}
+		}
+	}
+	
+	public void generateNodes(int width, int height, int numNodes, int maxEdgesPerNode, int seed, long framecount)
 	{
 		System.out.println("generating nodes");
 		Random r = new Random(seed);
@@ -332,6 +382,11 @@ public class NetworkModel implements Model {
 		long maxDistanceSquared = maxDistance*maxDistance;
 		int i = 0;
 		int id = 0;
+		
+		List<Integer> nodeKeyList = new ArrayList<Integer>();
+		for (Integer key : nodes.keySet())
+			nodeKeyList.add(key);
+		
 		while (i < width) {
 			int j = 0;
 			while (j < height) {
@@ -343,14 +398,14 @@ public class NetworkModel implements Model {
 				double y = j + voffset;
 				y = Math.max(0, y);
 				y = Math.min(height, y);
-				Node node = new Node();
+				Node node = new Node(id, framecount, this);
 				int xi = (int)Math.round(x);
 				int yi = (int)Math.round(y);
 				node.setX(xi);
 				node.setY(yi);
-				node.setId(id);
-				linkInNode(node, width, height, maxEdgesPerNode, maxDistanceSquared, r);
-				nodes.add(node);
+				linkInNode(node, nodeKeyList, width, height, maxEdgesPerNode, maxDistanceSquared, r);
+				nodes.put(id, node);
+				nodeKeyList.add(id);
 				j += avgCellWidthPerNode;
 				if (id >= numNodes)
 					break;
@@ -360,12 +415,8 @@ public class NetworkModel implements Model {
 		}
 	}
 	
-	List<Node> nodes;
+	Map<Integer, Node> nodes = new HashMap<Integer, Node>();
 	
-	public NetworkModel() {
-		nodes = new ArrayList<Node>();
-		
-	}
 	
 	@Override
 	public void deserialize(String arg0) {
@@ -374,11 +425,13 @@ public class NetworkModel implements Model {
 	@Override
 	public Model duplicate() {
 		NetworkModel ret = new NetworkModel();
-		for (int i = 0; i < nodes.size(); i++)
+		Set<Integer> keys = nodes.keySet();
+		for (Integer i : keys)
 		{
 			Node n = nodes.get(i);
-			ret.nodes.add(n.duplicate());
+			ret.nodes.put(n.getId(), n);
 		}
+		ret.nc = (NetworkConfig)nc.duplicate();
 		return ret;
 	}
 
@@ -387,22 +440,29 @@ public class NetworkModel implements Model {
 		return null;
 	}
 	
-	public int getNumNodes() {
-		return nodes.size();
-	}
+    public Set<Integer> getNodeKeys() {
+    	return nodes.keySet();
+    }
 	
 	public Node getNode(int i) {
 		return nodes.get(i);
 	}
 	
-	public void addNode(Node n) {
-		nodes.add(n);
+	public void addUnattachedNode(Node n) {
+		nodes.put(n.getId(), n);
+	}
+	
+	public void removeNode(Node n) {
+		gb.removeNode(n);
+		unlinkNode(n);
+		nodes.remove(n.getId());
 	}
 	
 	public Node findNearestNode(int x, int y) {
 		long sofar = Long.MAX_VALUE;
 		int index = 0;
-		for (int i = 0; i < nodes.size(); i++) {
+		Set<Integer> keys = nodes.keySet();
+		for (Integer i : keys) {
 			Node node = nodes.get(i);
 			int diffx = x - node.getX();
 			int diffy = y - node.getY();
@@ -417,9 +477,10 @@ public class NetworkModel implements Model {
 	
     public List<Node> getNodesFromIds(List<Integer> ids) throws IllegalArgumentException {
     	List<Node> ret = new ArrayList<Node>();
+    	Set<Integer> keys = nodes.keySet();
     	for (Integer i : ids) {
-    	   if (i < 0 || i >= nodes.size())
-    		   throw new IllegalArgumentException("node index out of range");
+    	    if (!keys.contains(i))
+    		   throw new IllegalArgumentException("node id " + i + " does not exist");
     	   ret.add(nodes.get(i));
     	}
     	return ret;
@@ -431,7 +492,10 @@ public class NetworkModel implements Model {
     }
     
     public void setNetworkConfig(NetworkConfig nc) {
+    	gb.minDistance = nc.getMinDistance();
 		gb.maxDistance = nc.getMaxDistance();
+		gb.minEdgesPerNode = nc.getMinNeighbors();
+		gb.maxEdgesPerNode = nc.getMaxNeighbors();
 		gradA = (Float)nc.getLocal("gradA");
 		gradB = (Float)nc.getLocal("gradB");
 		gradC = (Float)nc.getLocal("gradC");
@@ -443,6 +507,11 @@ public class NetworkModel implements Model {
 			int lry = (int)nc.getDblry();
 			dbw = new DebugWindow(ulx, uly, lrx, lry);
 		}
+		this.nc = nc;
+    }
+    
+    public double getMaxDensity() {
+    	return nc.getMaxDensity();
     }
     
     public void printDebugWindow() {
@@ -461,6 +530,10 @@ public class NetworkModel implements Model {
     				}
     			}
     	}
+    }
+    
+    public List<Point2DConfig> getStartPoints() {
+    	return nc.getStartPoints();
     }
 
 	

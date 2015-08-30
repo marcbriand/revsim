@@ -49,9 +49,11 @@ public class NetworkView extends AbstractView {
         NetworkModel nm = (NetworkModel)model;
         nm.printDebugWindow();
         
-        int n = nm.getNumNodes();
-        for (int i = 0; i < n; i++) {
+        Set<Integer> keys = nm.getNodeKeys();
+        for (Integer i : keys) {
         	Node node = nm.getNode(i);
+        	if (node.getId() == 1 || node.getId() == 6 || node.getId() == 13 || node.getId() == 88)
+        		g.drawOval(node.getX()-2, node.getY()-2, 4, 4);
         	g.setColor(new Color(255, 255, 255));
         	int fromx = node.getX();
         	int fromy = node.getY();

@@ -1,10 +1,15 @@
 package config;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import revsim.config.ConfigException;
+import revsim.config.objects.ArrayObject;
 import revsim.config.objects.ConfigObject;
 
 public class NetworkConfig extends ConfigObject {
 
+	int minDistance;
 	int maxDistance;
 	float gradA;
 	float gradB;
@@ -15,36 +20,55 @@ public class NetworkConfig extends ConfigObject {
 	float dbuly;
 	float dblrx;
 	float dblry;
+	float maxDensity = Float.MAX_VALUE;
+	int minNeighbors = 0;
+	int maxNeighbors = Integer.MAX_VALUE;
+	ArrayObject startPoints = new ArrayObject();
 	
 	@Override
 	public ConfigObject duplicate() {
 		
 		NetworkConfig ret = new NetworkConfig();
+		ret.minDistance = minDistance;
 		ret.maxDistance = maxDistance;
 		ret.gradA = gradA;
 		ret.gradB = gradB;
 		ret.gradC = gradC;
 		ret.gradD = gradD;
+		ret.maxDensity = maxDensity;
+		ret.minNeighbors = minNeighbors;
+		ret.maxNeighbors = maxNeighbors;
+		ret.startPoints = (ArrayObject)startPoints.duplicate();
 		return ret;
 	}
 	
 	@Override
 	public void setLocal(String key, Object obj) throws ConfigException {
 		if (key.equals("maxDistance")) {
-			if (obj == null)
-				throw new ConfigException("null value passed for int 'maxDistance'");
-			if (obj instanceof Float) {
-				Float fobj = (Float)obj;
-				maxDistance = fobj.intValue();
-			}
-			else
-				throw new ConfigException("'maxDistance' was not a number");
+			maxDistance = getFloatAsInt("maxDistance", obj);
+		}
+		else if (key.equals("minDistance")) {
+			minDistance = getFloatAsInt("minDistance", obj);
+		}
+		else if (key.equals("minNeighbors")) {
+			minNeighbors = getFloatAsInt("minNeighbors", obj);
+		}
+		else if (key.equals("maxNeighbors")) {
+			maxNeighbors = getFloatAsInt("maxNeighbors", obj);
 		}
 		else {
 			super.setLocal(key, obj);
 		}
 	}
 	
+	public int getMinDistance() {
+		return minDistance;
+	}
+
+	public void setMinDistance(int minDistance) {
+		this.minDistance = minDistance;
+	}
+
 	public void setMaxDistance(int d) {
 		maxDistance = d;
 	}
@@ -124,5 +148,37 @@ public class NetworkConfig extends ConfigObject {
 	public void setDblry(float dblry) {
 		this.dblry = dblry;
 	}
+
+	public float getMaxDensity() {
+		return maxDensity;
+	}
+
+	public void setMaxDensity(float maxDensity) {
+		this.maxDensity = maxDensity;
+	}
+
+	public int getMinNeighbors() {
+		return minNeighbors;
+	}
+
+	public int getMaxNeighbors() {
+		return maxNeighbors;
+	}
+
+	public List<Point2DConfig> getStartPoints() {
+		List<Point2DConfig> ret = new ArrayList<Point2DConfig>();
+		List<Object> obs = startPoints.getObjects();
+		for (Object o : obs) {
+			Point2DConfig pc = (Point2DConfig)o;
+			ret.add(pc);
+		}
+		return ret;
+	}
+
+	public void setStartPoints(ArrayObject startPoints) {
+		this.startPoints = startPoints;
+	}
+	
+	
 
 }

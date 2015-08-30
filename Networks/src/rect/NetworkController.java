@@ -4,10 +4,12 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import config.NetworkConfig;
+import config.Point2DConfig;
 import beings.IBeing;
 import beings.TriangleBeing;
 import props.DProp;
@@ -27,7 +29,7 @@ import revsim.mvc.Model;
 
 public class NetworkController implements Controller {
 	
-
+    int minDistance = 12;
 	int maxDistance = 50;
 	Float gradA;
 	Float gradB;
@@ -42,15 +44,23 @@ public class NetworkController implements Controller {
 		System.out.println("NetworkController.inc(), currentFrame = " + currentFrame);
 		Model model = prevModel;
 		if (model == null) {
-			model = createFirstNode(currentFrame);
+			model = createFirstNodes(currentFrame);
 			NetworkModel nm = (NetworkModel)model;
+			nm.setNetworkConfig(nc);
 			
-			nm = Geometry.generateFirstNeighbors(nm);
+			nm = Geometry.generateFirstNeighbors2(nm, currentFrame);
+			
+			Set<Integer> keys = nm.getNodeKeys();
+			for (Integer i : keys) {
+				Node n = nm.getNode(i);
+//				System.out.println("node " + n.getId() + ", density: " + n.getDensity());
+			}
 			
 		}
 		else {
 			NetworkModel nm = (NetworkModel)model;
-			model = Geometry.generateNeighbors(nm);
+			removeLonersOlderThan(currentFrame - 2, nm);
+			model = Geometry.generateNeighbors(nm, currentFrame);
 		}
         try {
             Thread.sleep(1000);
@@ -63,22 +73,48 @@ public class NetworkController implements Controller {
 		return model;
 	}
 	
-	private Model createFirstNode(long framecount) {
+	private void removeLonersOlderThan(long frame, NetworkModel nm) {
+		Set<Integer> keys = nm.getNodeKeys();
+		List<Node> toRemove = new ArrayList<Node>();
+		for (Integer i : keys) {
+			Node n = nm.getNode(i);
+			if (n.getNeighbors().size() <= 1 && n.getBirthday() < frame) {
+				toRemove.add(n);
+			}
+		}
+		for (Node n : toRemove)
+			nm.removeNode(n);
+	}
+	
+	private Model createFirstNodes(long framecount) {
 		NetworkModel nm = new NetworkModel();
-		Node first = new Node();
-		first.setId(0);
+		NetworkModel.GenerateBuilder gb = new NetworkModel.GenerateBuilder();
+		nm.setGenerateBuilder(gb);
+
+		nm.setNetworkConfig(nc);
+		gb.setDimensions(800, 600, minDistance, maxDistance);
+
+		nm.setRandom(new Random(framecount));
+
+/*
+		Node first = new Node(0, framecount, nm);
 		first.setX(400);
 		first.setY(300);
-		nm.addNode(first);
+		nm.addUnattachedNode(first);
 		nm.addNewAndSourceNode(first, null);
+*/
+		List<Point2DConfig> startPoints = nm.getStartPoints();
+		for (Point2DConfig pt : startPoints) {
+			int id = nm.getNextId();
+			Node n = new Node(id, framecount, nm);
+			n.setX(pt.getX());
+			n.setY(pt.getY());
+			nm.addUnattachedNode(n);
+			nm.addNewAndSourceNode(n, null);
+		}
 		
-		NetworkModel.GenerateBuilder gb = new NetworkModel.GenerateBuilder();
-		gb.setDimensions(800, 600, maxDistance);
+		
 
-		gb.setMaxEdgesPerNode(8);
-		nm.setGenerateBuilder(gb);
-		nm.setNetworkConfig(nc);
-		nm.setRandom(new Random(framecount));
 		return nm;
 	}
 
@@ -91,6 +127,7 @@ public class NetworkController implements Controller {
 		if (ncObj instanceof NetworkConfig) {
 			nc = (NetworkConfig)ncObj;
 			System.out.println("max distance = " + nc.getMaxDistance());
+			minDistance = nc.getMinDistance();
 			maxDistance = nc.getMaxDistance();
 			gradA = (Float)nc.getLocal("gradA");
 			gradB = (Float)nc.getLocal("gradB");
