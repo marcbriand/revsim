@@ -18,6 +18,7 @@ import revsim.config.ConfigException;
 import revsim.config.objects.ConfigObject;
 import revsim.mvc.Model;
 import revsim.mvc.view.AbstractView;
+import revsim.rendering2.CircleRender;
 
 public class NetworkView extends AbstractView {
 	
@@ -45,6 +46,11 @@ public class NetworkView extends AbstractView {
 	@Override
 	public Image render(Model model, int arg1, int arg2) {
         BufferedImage bim = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
+        
+        CircleRender cr = new CircleRender();
+        cr.setFillTaper(40);
+        cr.fill(400, 300, 40, Color.red, bim);
+        
         Graphics g = bim.getGraphics();
         NetworkModel nm = (NetworkModel)model;
         nm.printDebugWindow();
