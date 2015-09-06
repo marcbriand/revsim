@@ -19,6 +19,7 @@ import revsim.config.objects.ConfigObject;
 import revsim.mvc.Model;
 import revsim.mvc.view.AbstractView;
 import revsim.rendering2.CircleRender;
+import revsim.rendering2.LineRender;
 
 public class NetworkView extends AbstractView {
 	
@@ -47,14 +48,24 @@ public class NetworkView extends AbstractView {
 	public Image render(Model model, int arg1, int arg2) {
         BufferedImage bim = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
         
-        CircleRender cr = new CircleRender();
-        cr.setFillTaper(40);
-        cr.fill(400, 300, 40, Color.red, bim);
+//        CircleRender cr = new CircleRender();
+//        cr.setFillTaper(100);
+//        cr.fill(400, 300, 200, Color.red, bim);
+        LineRender lr = new LineRender();
+        lr.setLineWidth(40);
+        lr.setTaper(20);
+        lr.drawLineWithCaps(300, 300, 500, 200, Color.green, bim);
+        
+
         
         Graphics g = bim.getGraphics();
-        NetworkModel nm = (NetworkModel)model;
-        nm.printDebugWindow();
         
+        g.setColor(Color.red);
+        g.drawLine(300, 300, 100, 200);
+        g.drawLine(100, 300, 100, 200);
+        NetworkModel nm = (NetworkModel)model;
+        
+        g.setColor(Color.white);
         Set<Integer> keys = nm.getNodeKeys();
         for (Integer i : keys) {
         	Node node = nm.getNode(i);
