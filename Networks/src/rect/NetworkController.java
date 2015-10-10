@@ -22,10 +22,13 @@ import algo.IPropAlgorithm;
 import algo.Propagation;
 import algo.RadialDistance;
 import algo.RadialInfluence;
+import algo.Util;
 import revsim.config.ConfigException;
 import revsim.config.objects.ConfigObject;
 import revsim.mvc.Controller;
 import revsim.mvc.Model;
+import spacetheories.randomexpansion.RandomExpansionControllerAlgorithm;
+import spacetheories.relsize.seventwowithzero.ControllerAlgorithm7_2_0;
 
 public class NetworkController implements Controller {
 	
@@ -38,29 +41,18 @@ public class NetworkController implements Controller {
 	NetworkConfig nc;
 	IPropAlgorithm alg = new RadialDistance("xval");
 	List<Node> nextNodes = new ArrayList<Node>();
-
+//	RandomExpansionControllerAlgorithm reca = new RandomExpansionControllerAlgorithm();
+    ControllerAlgorithm7_2_0 reca = new ControllerAlgorithm7_2_0();
+	
 	@Override
 	public Model inc(Model prevModel, long currentFrame) {
 		System.out.println("NetworkController.inc(), currentFrame = " + currentFrame);
 		Model model = prevModel;
 		if (model == null) {
-			model = createFirstNodes(currentFrame);
-			NetworkModel nm = (NetworkModel)model;
-			nm.setNetworkConfig(nc);
-			
-			nm = Geometry.generateFirstNeighbors2(nm, currentFrame);
-			
-			Set<Integer> keys = nm.getNodeKeys();
-			for (Integer i : keys) {
-				Node n = nm.getNode(i);
-//				System.out.println("node " + n.getId() + ", density: " + n.getDensity());
-			}
-			
+			model = reca.createFirstNodes(this, nc, currentFrame);
 		}
 		else {
-			NetworkModel nm = (NetworkModel)model;
-			removeLonersOlderThan(currentFrame - 2, nm);
-			model = Geometry.generateNeighbors(nm, currentFrame);
+			model = reca.growNetwork(this, model, currentFrame);
 		}
         try {
             Thread.sleep(1000);
@@ -73,7 +65,7 @@ public class NetworkController implements Controller {
 		return model;
 	}
 	
-	private void removeLonersOlderThan(long frame, NetworkModel nm) {
+	public void removeLonersOlderThan(long frame, NetworkModel nm) {
 		Set<Integer> keys = nm.getNodeKeys();
 		List<Node> toRemove = new ArrayList<Node>();
 		for (Integer i : keys) {
@@ -86,7 +78,7 @@ public class NetworkController implements Controller {
 			nm.removeNode(n);
 	}
 	
-	private Model createFirstNodes(long framecount) {
+	public Model createFirstNodes(long framecount) {
 		NetworkModel nm = new NetworkModel();
 		NetworkModel.GenerateBuilder gb = new NetworkModel.GenerateBuilder();
 		nm.setGenerateBuilder(gb);
@@ -96,13 +88,6 @@ public class NetworkController implements Controller {
 
 		nm.setRandom(new Random(framecount));
 
-/*
-		Node first = new Node(0, framecount, nm);
-		first.setX(400);
-		first.setY(300);
-		nm.addUnattachedNode(first);
-		nm.addNewAndSourceNode(first, null);
-*/
 		List<Point2DConfig> startPoints = nm.getStartPoints();
 		for (Point2DConfig pt : startPoints) {
 			int id = nm.getNextId();

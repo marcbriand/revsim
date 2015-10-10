@@ -153,4 +153,35 @@ public class Node {
 	public void setBirthday(long birthday) {
 		this.birthday = birthday;
 	}
+	
+	public int[] findNeighborsAroundArc (int entryId, double fraction) {
+		if (fraction == 0.0)
+			throw new IllegalArgumentException("fraction must be > 0 and < 1");
+		int entryIndex = -1;
+		int nsize = neighbors.size();
+		for (int i = 0; i < nsize; i++) {
+			if (entryId == neighbors.get(i)) {
+				entryIndex = i;
+				break;
+			}
+		}
+		if (entryIndex < 0)
+			throw new IllegalArgumentException("entryId " + entryId + " does not represent a neighbor");
+        int[] ret;
+        if (nsize == 1)
+        	return new int[0];
+		int sector = (int)Math.floor(fraction*nsize);
+		if (sector/fraction == nsize) {
+			// evenly divided
+			ret = new int[1];
+            ret[0] = (entryIndex + sector) % nsize;
+			
+		}
+		else {
+			ret = new int[2];
+			ret[0] = (entryIndex + sector) % nsize;
+			ret[1] = (entryIndex + sector + 1) % nsize;
+		}
+		return ret;
+	}
 }

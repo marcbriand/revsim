@@ -25,6 +25,10 @@ public class NetworkConfig extends ConfigObject {
 	int maxNeighbors = Integer.MAX_VALUE;
 	ArrayObject startPoints = new ArrayObject();
 	
+	SigmoidConfig distGrowConfig;
+	SigmoidConfig arcsGrowConfig;
+	long maxGenerateFrame = Long.MAX_VALUE;
+	
 	@Override
 	public ConfigObject duplicate() {
 		
@@ -177,6 +181,30 @@ public class NetworkConfig extends ConfigObject {
 
 	public void setStartPoints(ArrayObject startPoints) {
 		this.startPoints = startPoints;
+	}
+
+	public SigmoidConfig getDistGrowFunc() {
+		return distGrowConfig;
+	}
+
+	public void setDistGrowFunc(SigmoidConfig sigmoidConfig) {
+		this.distGrowConfig = sigmoidConfig;
+	}
+	
+	public void setArcsGrowFunc(SigmoidConfig sigmoidConfig) {
+		this.arcsGrowConfig = sigmoidConfig;
+	}
+	
+	public SigmoidConfig getArcsGrowFunc() {
+		return this.arcsGrowConfig;
+	}
+
+	public long getMaxGenerateFrame() {
+		return maxGenerateFrame;
+	}
+
+	public void setMaxGenerateFrame(long maxGenerateFrame) {
+		this.maxGenerateFrame = maxGenerateFrame;
 	}
 	
 	

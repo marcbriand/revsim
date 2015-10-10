@@ -10,8 +10,10 @@ import java.util.Set;
 
 import com.google.gson.Gson;
 
+import config.SigmoidConfig;
 import rect.NetworkModel;
 import rect.Node;
+import revsim.rendering.DoublePoint2D;
 
 public class Geometry {
 	
@@ -46,7 +48,7 @@ public class Geometry {
 		}
 	}
 	
-	final static double TwoPi = 2.0*Math.PI;
+	public final static double TwoPi = 2.0*Math.PI;
 	
 	public static boolean tooSmall(double num, double denom, double alpha) {
 		// |num/denom| < alpha
@@ -726,6 +728,7 @@ public class Geometry {
     	a.addNeighbor(b.getId());
     	b.addNeighbor(a.getId());     
     }
+    
    
     public static NetworkModel generateFirstNeighbors(NetworkModel nm, long framecount) {
     	NetworkModel.NewAndSourceNodes nsn = nm.getNewAndSourceNodes();
@@ -737,7 +740,10 @@ public class Geometry {
     	
     	NetworkModel.GenerateBuilder gb = nm.getGenerateBuilder();
     	Random r = nm.getRandom();
-    	int numSpokes = Geometry.pickBetween(4, gb.maxEdgesPerNode, true, r);
+//    	int numSpokes = Geometry.pickBetween(4, gb.maxEdgesPerNode, true, r);
+    	SigmoidConfig arcscon = nm.getArcsGrowFunc();
+    	DoublePoint2D numarcs = Sigmoid.sigmoidRange(arcscon, framecount);
+    	int numSpokes = Geometry.pickBetween((int)numarcs.x, (int)numarcs.y, true, r);
     	double avgAngle = 2.0*Math.PI/numSpokes;
     	double maxVariance = 0.1*avgAngle;
     	for (int i = 0; i < numSpokes; i++) {
@@ -768,14 +774,39 @@ public class Geometry {
     	NetworkModel.GenerateBuilder gb = nm.getGenerateBuilder();
     	Random r = nm.getRandom();
     	
+    	AsymptoticRangeConfig arc = new AsymptoticRangeConfig();
+    	arc.minVal = gb.minDistance;
+    	arc.maxVal = gb.maxDistance;
+    	arc.bias = 0.0;
+    	arc.scale = 0.2;
+    	arc.percent = 0.1;
+/*    	
+    	SigmoidConfig scon = new SigmoidConfig();
+    	scon.offset = 5;
+    	scon.minVal = gb.minDistance;
+    	scon.maxVal = gb.maxDistance;
+    	scon.pct = 0.1;
+*/
+    	SigmoidConfig scon = nm.getGrowConfig();
+    	
     	for (Node firstNode : firstNodes) {
     	
-    	    int numSpokes = Geometry.pickBetween(4, gb.maxEdgesPerNode, true, r);
+//    	    int numSpokes = Geometry.pickBetween(4, gb.maxEdgesPerNode, true, r);
+    	    
+        	SigmoidConfig arcscon = nm.getArcsGrowFunc();
+        	DoublePoint2D numarcs = Sigmoid.sigmoidRange(arcscon, framecount);
+        	int numSpokes = Geometry.pickBetween((int)numarcs.x, (int)numarcs.y, true, r);
     	    double avgAngle = 2.0*Math.PI/numSpokes;
     	    double maxVariance = 0.1*avgAngle;
     	    for (int i = 0; i < numSpokes; i++) {
     		    double angle = genAngle(i*avgAngle, maxVariance, r);
-    		    double length = Util.doubleBetween(gb.minDistance, gb.maxDistance, r);
+//    		    double length = Util.doubleBetween(gb.minDistance, gb.maxDistance, r);
+//        		double length = Util.birthdayBasedPick(gb.minDistance, gb.maxDistance, framecount, 0.2, r);
+//    		    double length = AsymptoticRange.asymptotic(arc, framecount);
+    		    DoublePoint2D lrange = Sigmoid.sigmoidRange(scon, framecount);
+    		    double length = Util.doubleBetween(lrange.x, lrange.y, r);
+//    		    double length = Sigmoid.sigmoid(scon, framecount);
+    	
     		    int newX = firstNode.getX() + (int)(Math.cos(angle)*length);
     		    int newY = firstNode.getY() + (int)(Math.sin(angle)*length);
     		    Node newNode = new Node(nm.getNextId(), framecount, nm);
@@ -887,6 +918,21 @@ public class Geometry {
     	return ret;
     }
     
+    public static void sortNeighborsByAngle(Node node, NetworkModel nm) {
+    	List<Integer> nbis = node.getNeighbors();
+    	List<NodeAndAngle> nas = new ArrayList<NodeAndAngle>();
+    	for (Integer i : nbis) {
+    		Node dest = nm.getNode(i);
+    		double angle = Geometry.findAngle(node, dest);
+    		nas.add(new NodeAndAngle(dest, angle));
+    	}
+    	Collections.sort(nas, new AngleComparator());
+    	nbis.clear();
+    	for (NodeAndAngle na : nas) {
+    		nbis.add(na.node.getId());
+    	}
+    }
+    
     private static int addConnectionsAround(Node node, List<NodeAndAngle> nearbySorted,
     		                                 NetworkModel.RegionCell rc,
     		                                 double startAngle, int maxToFind, NetworkModel nm) {
@@ -989,13 +1035,35 @@ public class Geometry {
 
     	int id = nm.getNextId();
     	
+    	AsymptoticRangeConfig arc = new AsymptoticRangeConfig();
+    	arc.minVal = nm.getGenerateBuilder().minDistance;
+    	arc.maxVal = nm.getGenerateBuilder().maxDistance;
+    	arc.bias = 0.0;
+    	arc.scale = 0.2;
+    	arc.percent = 0.1;
+/*
+    	SigmoidConfig scon = new SigmoidConfig();
+    	scon.offset = 5;
+    	scon.minVal = nm.getGenerateBuilder().minDistance;
+    	scon.maxVal = nm.getGenerateBuilder().maxDistance;
+    	scon.pct = 0.1;
+*/
+    	SigmoidConfig scon = nm.getGrowConfig();
+    	
     	for (int i = 0; i < numToGen; i++) {
     		double angleVar = r.nextDouble()*maxVariance;
     		double angle = startAngle + i*avgAngle + angleVar;
     		double maxLength = nm.getGenerateBuilder().maxDistance;
     		double minLength = nm.getGenerateBuilder().minDistance;
    // 		double length = randPickDoubleBetween(0.25*maxLength, maxLength, r);
-    		double length = Util.doubleBetween(minLength, maxLength, r);
+//    		double length = Util.doubleBetween(minLength, maxLength, r);
+//    		DoublePoint2D range = AsymptoticRange.asymptoticRange(arc, framecount);
+    		DoublePoint2D range = Sigmoid.sigmoidRange(scon, framecount);
+    		System.out.println("range: " + range.x + ", " + range.y);
+    		double length = range.y;
+    		
+    		
+//    		double length = Util.birthdayBasedPick(nm.getGenerateBuilder().minDistance, nm.getGenerateBuilder().maxDistance, framecount, 0.2, r);
     		boolean ok = true;
     		Node newNode = null;
     		for (int j = 0; j < 4; j++) {
@@ -1018,7 +1086,9 @@ public class Geometry {
     				if (!ok)
     					break;
     			}
-    			if (length < minLength)
+//    			if (length < minLength)
+//    				break;
+    			if (length < range.x)
     				break;
     		}
     		if (newNode != null) {
@@ -1041,10 +1111,17 @@ public class Geometry {
     	List<NodeAndAngle> nearbyNodes = Geometry.findAngleSortedNearbyNodes(newNode, nm);
     	double startAngle = normalizeAngle(gradAngle + Math.PI);
     	int currentNumNeighbors = newNode.getNeighbors().size();
-    	int maxToFind = nm.getGenerateBuilder().maxEdgesPerNode - currentNumNeighbors;
+    	
+    	SigmoidConfig arcscon = nm.getArcsGrowFunc();
+    	DoublePoint2D numarcs = Sigmoid.sigmoidRange(arcscon, framecount);
+    	int maxEdges = (int)numarcs.y;
+    	
+//    	int maxToFind = nm.getGenerateBuilder().maxEdgesPerNode - currentNumNeighbors;
+    	int maxToFind = maxEdges - currentNumNeighbors;
     	int numConn = Geometry.addConnectionsAround(newNode, nearbyNodes, rc, startAngle, maxToFind, nm);
     	
-    	int maxToGenerate = nm.getGenerateBuilder().maxEdgesPerNode - numConn - currentNumNeighbors;
+//    	int maxToGenerate = nm.getGenerateBuilder().maxEdgesPerNode - numConn - currentNumNeighbors;
+    	int maxToGenerate = maxEdges - numConn - currentNumNeighbors;
     	Geometry.generateUnconnectedNeighbors(newNode, rc, gradAngle, maxToGenerate, nm, framecount);
     	
     }

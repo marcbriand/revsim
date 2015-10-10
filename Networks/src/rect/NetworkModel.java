@@ -9,11 +9,18 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import algo.Geometry;
+import algo.Geometry.Gradient2D;
 import config.NetworkConfig;
 import config.Point2DConfig;
+import config.SigmoidConfig;
 import revsim.mvc.Model;
 
 public class NetworkModel implements Model {
+	
+	private static double TwoPi = 2.0*Math.PI;
+	
+	List<Node> trail = new ArrayList<Node>();
 	
 	NetworkConfig nc = new NetworkConfig();
 	
@@ -431,6 +438,9 @@ public class NetworkModel implements Model {
 			Node n = nodes.get(i);
 			ret.nodes.put(n.getId(), n);
 		}
+		for (Node n : trail) {
+			ret.trail.add(n);
+		}
 		ret.nc = (NetworkConfig)nc.duplicate();
 		return ret;
 	}
@@ -510,6 +520,10 @@ public class NetworkModel implements Model {
 		this.nc = nc;
     }
     
+    public SigmoidConfig getArcsGrowFunc() {
+    	return nc.getArcsGrowFunc();
+    }
+    
     public double getMaxDensity() {
     	return nc.getMaxDensity();
     }
@@ -535,6 +549,139 @@ public class NetworkModel implements Model {
     public List<Point2DConfig> getStartPoints() {
     	return nc.getStartPoints();
     }
+    
+    public SigmoidConfig getGrowConfig() {
+    	return nc.getDistGrowFunc();
+    }
 
+    public long getMaxGenerateFrame() {
+    	return nc.getMaxGenerateFrame();
+    }
+    
+    private boolean isInTrail(Node n) {
+    	for (Node node : trail) {
+    		if (n.getId() == node.getId())
+    			return true;
+    	}
+    	return false;
+    }
+    
+    public List<Node> getYoungestNeighbors(Node n) {
+    	List<Integer> nbs = n.getNeighbors();
+    	List<Node> nbnodes = new ArrayList<Node>();
+    	long latestBirthday = 0;
+    	for (Integer i : nbs) {
+    		Node node = getNode(i);
+    		if (isInTrail(node))
+    			continue;
+    		if (node.getBirthday() > latestBirthday)
+    			latestBirthday = node.getBirthday();
+    		nbnodes.add(node);
+    	}
+    	List<Node> ret = new ArrayList<Node>();
+    	for (Node cand : nbnodes) {
+    		if (cand.getBirthday() == latestBirthday)
+    			ret.add(cand);
+    	}
+    	return ret;
+    }
+    
+    public List<Node> getYoungestNodes() {
+    	long latestBirthday = 0;
+    	for (Integer i : nodes.keySet()) {
+    		Node n = nodes.get(i);
+    		if (n.getBirthday() > latestBirthday)
+    			latestBirthday = n.getBirthday();
+    	}
+    	List<Node> ret = new ArrayList<Node>();
+    	for (Integer i : nodes.keySet()) {
+    		Node n = nodes.get(i);
+    		if (n.getBirthday() == latestBirthday)
+    			ret.add(n);
+    	}
+    	return ret;
+    }
+    
+    public void addToTrail(Node n) {
+    	trail.add(n);
+    }
+    
+    public List<Node> getTrail() {
+    	return trail;
+    }
+    
+    public void sortAllNodeNeighbors() {
+    	for (Integer i : nodes.keySet()) {
+    		Node n = nodes.get(i);
+    		Geometry.sortNeighborsByAngle(n, this);
+    	}
+    }
+    
+    public static double getDensity(Node node, Set<Integer> exclude, int depth, Map<Integer, Node> nodes) {
+    	List<Integer> nbis = node.getNeighbors();
+        double sum = 0;
+        for (Integer i : nbis) {
+        	if (exclude.contains(i))
+        		continue;
+        	sum += 1.0;
+        }
+        
+        if (depth <= 1)
+        	return sum;
+        
+        exclude.add(node.getId());
+    	
+    	for (Integer i : nbis) {
+    		if (exclude.contains(i))
+    			continue;
+    		Node n = nodes.get(i);
+    		sum += 0.8*getDensity(n, exclude, depth-1, nodes);
+    	}
+    	
+    	return sum;
+    }
+    
+    public static class NodeIndexAndMagnitude {
+    	public int nodeIndex;
+    	public double magnitude;
+    	public NodeIndexAndMagnitude(int id, double m) {
+    		nodeIndex = id;
+    		magnitude = m;
+    	}
+    }
+    
+    public NodeIndexAndMagnitude findMaxDensitySpoke(Node node, int depth) {
+    	return findMaxDensitySpoke(node, depth, nodes);
+    }
+    
+    public static NodeIndexAndMagnitude findMaxDensitySpoke(Node node, int depth, Map<Integer, Node> nodes) {
+    	List<Integer> nbis = node.getNeighbors();
+    	double angleDelta = TwoPi/nbis.size();
+    	double vecx = 0.0;
+    	double vecy = 0.0;
+    	for (int index = 0; index < nbis.size(); index++) {
+    		double angle = index*angleDelta;
+    		int i = nbis.get(index);
+    		Node nb = nodes.get(i);
+    		Set<Integer> exclude = new HashSet<Integer>();
+    		exclude.add(node.getId());
+    		double density = getDensity(nb, exclude, depth, nodes);
+    		double dx = density*Math.cos(angle);
+    		double dy = density*Math.sin(angle);
+    		vecx += dx;
+    		vecy += dy;
+    	}
+    	
+    	Gradient2D grad = new Gradient2D(vecx, vecy);
+    	double mag = Math.sqrt((vecx*vecx + vecy*vecy));
+    	double maxDensityAngle = Geometry.findAngle(grad);
+    	int index = (int)Math.floor(maxDensityAngle/angleDelta);
+    	double deltaLow = maxDensityAngle - index*angleDelta;
+    	double deltaHigh = (index+1)*angleDelta - maxDensityAngle;
+    	if (deltaLow < deltaHigh)
+    		return new NodeIndexAndMagnitude(index, mag);
+    	return index+1 >= nbis.size() ? new NodeIndexAndMagnitude(0, mag) : new NodeIndexAndMagnitude(index+1, mag);
+    }
+    
 	
 }
