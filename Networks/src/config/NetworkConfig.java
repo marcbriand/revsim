@@ -24,6 +24,7 @@ public class NetworkConfig extends ConfigObject {
 	int minNeighbors = 0;
 	int maxNeighbors = Integer.MAX_VALUE;
 	ArrayObject startPoints = new ArrayObject();
+	ArrayObject startConnections = new ArrayObject();
 	
 	SigmoidConfig distGrowConfig;
 	SigmoidConfig arcsGrowConfig;
@@ -178,9 +179,34 @@ public class NetworkConfig extends ConfigObject {
 		}
 		return ret;
 	}
+	
+	public List<Point3DConfig> get3DStartPoints() {
+		List<Point3DConfig> ret = new ArrayList<Point3DConfig>();
+		List<Object> obs = startPoints.getObjects();
+		for (Object o : obs)
+		{
+			Point3DConfig pc = (Point3DConfig)o;
+			ret.add(pc);
+		}
+		return ret;
+	}
 
 	public void setStartPoints(ArrayObject startPoints) {
 		this.startPoints = startPoints;
+	}
+	
+	public List<Point2DConfig> getStartConnections() {
+		List<Point2DConfig> ret = new ArrayList<Point2DConfig>();
+		List<Object> obs = startConnections.getObjects();
+		for (Object o : obs) {
+			Point2DConfig pc = (Point2DConfig)o;
+		    ret.add(pc);
+		}
+		return ret;
+	}
+
+	public void setStartConnections(ArrayObject startConnections) {
+		this.startConnections = startConnections;
 	}
 
 	public SigmoidConfig getDistGrowFunc() {

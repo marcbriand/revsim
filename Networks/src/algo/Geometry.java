@@ -623,6 +623,13 @@ public class Geometry {
     	return false;
     }
     
+    public static double findDistance(Node a, Node b) {
+    	double diffx = b.getX() - a.getX();
+    	double diffy = b.getY() - a.getY();
+    	double dsq = diffx*diffx + diffy*diffy;
+    	return Math.sqrt(dsq);
+    }
+    
 	public static double findAngle(Node from, Node to) {
 		int xdiff = to.getX() - from.getX();
 		int ydiff = from.getY() - to.getY(); // remember, y is flipped on screen
@@ -678,6 +685,48 @@ public class Geometry {
 			}
 		}
 	}
+	
+	static double smallestAngleDist(double a1, double a2) {
+		a1 = normalizeAngle(a1);
+		a2 = normalizeAngle(a2);
+		double diff1 = Math.abs(a2 - a1);
+		double diff2 = 0.0;
+		if (a2 > a1) {
+			diff2 = TwoPi - a2 + a1;
+		}
+		else {
+			diff2 = TwoPi - a1 + a2;
+		}
+		return Math.min(diff1, diff2);
+	}
+	
+	public static Node findNeighborClosestToAngle(Node node, double angle, NetworkModel nm) {
+		return findNeighborClosestToAngle(node, angle, nm, false);
+	}
+	
+	public static Node findNeighborClosestToAngle(Node node, double angle, NetworkModel nm, boolean mustBeUnattached) {
+		List<Integer> nbis = node.getNeighbors();
+		NodeAndAngle closest = null;
+		double minDistance = Double.MAX_VALUE;
+		for (Integer nbindex : nbis) {
+			Node nb = nm.getNode(nbindex);
+			double angleToNb = findAngle(node, nb);
+			double diffa = smallestAngleDist(angle, angleToNb);
+			if (diffa < minDistance) {
+				if (mustBeUnattached) {
+					if (nb.getNeighbors().size() == 1) {
+						closest = new NodeAndAngle(nb, angleToNb);
+						minDistance = diffa;						
+					}
+				}
+				else {
+				   closest = new NodeAndAngle(nb, angleToNb);
+				   minDistance = diffa;
+				}
+			}
+		}
+		return closest == null ? null : closest.node;
+	}
     
     public static double findAngle(Gradient2D grad) {
     	if (Math.abs(grad.getDeltaX()) >= Math.abs(grad.getDeltaY())) {
@@ -704,7 +753,7 @@ public class Geometry {
     	}
     }
     
-    private static double normalizeAngle(double angle) {
+    public static double normalizeAngle(double angle) {
     	double twopi = 2.0*Math.PI;
         while(angle < 0.0) {
     		angle += twopi;

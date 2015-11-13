@@ -1,0 +1,82 @@
+registry = 
+{
+  Network = config.NetworkConfig
+  Point = config.Point2DConfig
+  Point3 = config.Point3DConfig
+  Sigmoid = config.SigmoidConfig
+}
+
+networkt = template(Network)
+{
+   maxDistance = 15
+   gradA = 0.0
+   gradB = 0.0
+   gradC = 0.0
+   gradD = 1.0
+   maxNeighbors = 20
+}
+
+pointt = template(Point)
+{
+   x = 0.0
+   y = 0.0
+}
+
+point3 = template(Point3)
+{
+   x = 0.0
+   y = 0.0
+   z = 0.0
+}
+
+connt = template(Point)
+{
+   x = -1.0
+   y = -1.0
+}
+
+controller =
+{
+   net = make(networkt)
+   {
+      minDistance = 15
+      maxDistance = 50
+      maxDensity = 8
+      maxNeighbors = 10
+      useDebugWindow = false
+      dbulx = 490
+      dbuly = 275
+      dblrx = 540
+      dblry = 310
+//      startPoints = [make(pointt){x = 0 y = 0} make(pointt){x = 3 y = 0}]
+      startPoints = [make(point3){x = 0 y = 0 z = 0} 
+                     make(point3){x = 3 y = 3 z = 0}
+                     make(point3){x = 0 y = 3 z = 0}
+                    ]
+      startConnections = [make(connt){x = 0 y = 1}
+                          make(connt){x = 1 y = 2}
+                          make(connt){x = 2 y = 0}
+                         ]
+                     
+      distGrowFunc = create(Sigmoid)
+      {
+         startVal = 20
+         endVal = 40
+         offset = 5
+         pct = 0.4
+         steepness = 0.4
+      }
+      
+      arcsGrowFunc = create(Sigmoid)
+      {
+         startVal = 12
+         endVal = 4
+         offset = 6
+         pct = 0.3
+         steepness = 0.2
+      }
+      
+      maxGenerateFrame = 10
+   }
+}
+

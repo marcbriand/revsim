@@ -64,9 +64,11 @@ public class Node {
     	double d = 1.0;
     	for (Integer i : neighbors) {
     		Node nb = nm.getNode(i);
-    		d += 0.5;
-    		int numNeighborNeighbors = nb.getNeighbors().size() - 1; // don't count self
-    		d += 0.25*numNeighborNeighbors;
+    		if (nb != null) {
+    		    d += 0.5;
+    		    int numNeighborNeighbors = nb.getNeighbors().size() - 1; // don't count self
+    		    d += 0.25*numNeighborNeighbors;
+    		}
     	}
     	density = d;
     }

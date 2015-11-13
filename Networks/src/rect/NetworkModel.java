@@ -222,7 +222,7 @@ public class NetworkModel implements Model {
 			return new RegionLimits(c1, c2);
 		}
 		
-		public void addNode(Node n) {
+		private void addNode(Node n) {
 			RegionCell rc = findRegionCell(n);
 			if (!rc.valid)
 				return;
@@ -468,7 +468,7 @@ public class NetworkModel implements Model {
 		nodes.remove(n.getId());
 	}
 	
-	public Node findNearestNode(int x, int y) {
+	private Node findNearestNode(int x, int y) {
 		long sofar = Long.MAX_VALUE;
 		int index = 0;
 		Set<Integer> keys = nodes.keySet();
@@ -499,6 +499,11 @@ public class NetworkModel implements Model {
     public static void linkNodes(Node a, Node b) {
     	a.addNeighbor(b.getId());
     	b.addNeighbor(a.getId());
+    }
+    
+    public static void unlinkNodes(Node a, Node b) {
+    	a.removeNeighbor(b.getId());
+    	b.removeNeighbor(a.getId());
     }
     
     public void setNetworkConfig(NetworkConfig nc) {

@@ -28,7 +28,7 @@ import revsim.config.objects.ConfigObject;
 import revsim.mvc.Controller;
 import revsim.mvc.Model;
 import spacetheories.randomexpansion.RandomExpansionControllerAlgorithm;
-import spacetheories.relsize.seventwowithzero.ControllerAlgorithm7_2_0;
+import spacetheories.relsize.p4xyzoffset1.ControllerAlgorithmP4XYZ;
 
 public class NetworkController implements Controller {
 	
@@ -42,7 +42,7 @@ public class NetworkController implements Controller {
 	IPropAlgorithm alg = new RadialDistance("xval");
 	List<Node> nextNodes = new ArrayList<Node>();
 //	RandomExpansionControllerAlgorithm reca = new RandomExpansionControllerAlgorithm();
-    ControllerAlgorithm7_2_0 reca = new ControllerAlgorithm7_2_0();
+    ControllerAlgorithmP4XYZ reca = new ControllerAlgorithmP4XYZ();
 	
 	@Override
 	public Model inc(Model prevModel, long currentFrame) {
