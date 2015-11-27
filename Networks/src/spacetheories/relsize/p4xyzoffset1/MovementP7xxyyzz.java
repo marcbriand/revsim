@@ -45,7 +45,7 @@ public class MovementP7xxyyzz {
 		}
 	}
 	
-	private static int findNodeSize(int startingNodeSize, int startDelta, int crossZeroDelta,
+	private static int findNodeSizeOld(int startingNodeSize, int startDelta, int crossZeroDelta,
 			                        int minNodeSize, int maxNodeSize) {
 		int delta = startDelta;
 		while (startingNodeSize + delta > maxNodeSize) {
@@ -65,6 +65,32 @@ public class MovementP7xxyyzz {
 				throw new RuntimeException("can't size node");
 		}
 		return startingNodeSize + delta;		
+	}
+	
+	private static int findNodeSize(int startingNodeSize, int startDelta, int crossZeroDelta,
+			                         int minNodeSize, int maxNodeSize) {
+		int delta = startDelta;
+		if (delta >= 0) {
+		    while (startingNodeSize + delta > maxNodeSize) {
+			    if (delta - 7 <= 0)
+				    delta = crossZeroDelta;
+			    else
+				    delta -= 7;
+			    if (startingNodeSize + delta < minNodeSize)
+			    	throw new RuntimeException("can't size node");
+		    }
+		}
+		else {
+			while (startingNodeSize + delta < minNodeSize) {
+				if (delta + 7 >= 0)
+					delta = crossZeroDelta;
+				else
+					delta += 7;
+				if (startingNodeSize + delta > maxNodeSize)
+					throw new RuntimeException("can't size node");
+			}
+		}
+		return startingNodeSize + delta;
 	}
 	
 	private static int findNodeSizeForPosX(int startingNodeSize, int minNodeSize, int maxNodeSize) {
@@ -107,7 +133,7 @@ public class MovementP7xxyyzz {
 	public static List<Integer> calcNodeSizes(List<BiEnumXYZ0> inst, int startingNodeSize) {
 		List<Integer> ret = new ArrayList<Integer>();
 		for (BiEnumXYZ0 e : inst) {
-			int temp = calcNodeSizeForMovement(e, startingNodeSize, 3, 10);
+			int temp = calcNodeSizeForMovement(e, startingNodeSize, 3, 15);
 			startingNodeSize = temp;
 			ret.add(temp);
 		}

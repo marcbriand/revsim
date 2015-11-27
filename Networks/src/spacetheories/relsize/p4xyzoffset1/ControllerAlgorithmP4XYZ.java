@@ -243,7 +243,7 @@ public class ControllerAlgorithmP4XYZ implements IControllerAlgorithm {
 		while(numOrigDiffsUsed + numBridgeDiffsUsed < totalSize) {
 			float oProp = 0;
 			float bProp = 0;
-			float currTotal = numOrigDiffsUsed = numBridgeDiffsUsed;
+			float currTotal = numOrigDiffsUsed + numBridgeDiffsUsed;
 			if (currTotal > 0) {
 				oProp = ((float)numOrigDiffsUsed)/currTotal;
 				bProp = ((float)numBridgeDiffsUsed)/currTotal;
@@ -276,7 +276,7 @@ public class ControllerAlgorithmP4XYZ implements IControllerAlgorithm {
 		}
 		SpanningSequence ret = new SpanningSequence();
 		ret.nodeSizes = newSizes;
-		ret.includeStartNode = true;
+//		ret.includeStartNode = true;
 		ret.includeEndNode = true;
 		
 		return ret;
@@ -287,6 +287,7 @@ public class ControllerAlgorithmP4XYZ implements IControllerAlgorithm {
 			                                            int minZeroSteps,
 			                                            int maxSteps) {
 		SpanningSequence ss = makeSpanningSequenceOpen(includeStartNode, startingNodeSize, diffs, adiffs, minZeroSteps, maxSteps);
+		ss.includeEndNode = false;
 		int lastSequenceSize = ss.nodeSizes.get(ss.nodeSizes.size() - 1);
 		if (lastSequenceSize != endingNodeSize) {
 		    List<Integer> bridge = MovementP7xxyyzz.resolveDifference(lastSequenceSize, endingNodeSize, 3, 10);
@@ -341,7 +342,7 @@ public class ControllerAlgorithmP4XYZ implements IControllerAlgorithm {
 		nm.setNetworkConfig(ncfg);
 		
 		List<Point3DConfig> things = ncfg.get3DStartPoints();
-		List<IntPoint2D> thingsT = new ArrayList<IntPoint2D>();
+//		List<IntPoint2D> thingsT = new ArrayList<IntPoint2D>();
 		List<ApparentPoint3D> appPoints = new ArrayList<ApparentPoint3D>();
 		int screenWidth = 800;
 		int screenHeight = 600;
