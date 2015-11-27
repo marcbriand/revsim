@@ -50,7 +50,7 @@ controller =
       dblry = 310
 //      startPoints = [make(pointt){x = 0 y = 0} make(pointt){x = 3 y = 0}]
       startPoints = [make(point3){x = 0 y = 0 z = 0} 
-                     make(point3){x = 3 y = 3 z = 0}
+                     make(point3){x = 3 y = 3 z = 3}
                      make(point3){x = 0 y = 3 z = 0}
                     ]
       startConnections = [make(connt){x = 0 y = 1}
