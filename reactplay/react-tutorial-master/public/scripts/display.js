@@ -1,42 +1,73 @@
 var CommentBox = React.createClass({
   getInitialState: function() {
-	return {frame: 0}  
+	return {frame: 0, waiting: false}  
   },
   getNextFrame: function() {
 	  console.log("CommentBox.getNextFrame()");
+	  this.setState({frame: this.state.frame, waiting: true});
 	  
 	  var that = this;
 	  var success = function() {
 		  console.log("CommentBox.getNextFrame.success");
-		  that.nextButton.reset();
 		  var state = that.state;
 		  state.frame++;
+		  state.waiting = false;
 		  that.setState(state);
 	  }
 	  
 	  var error = function(msg) {
+		  var state = that.state;
+		  state.waiting = false;
+		  this.setState(state);
 		  console.log("CommentBox.getNextFrame.error " + msg);
 	  }
 	  
-	  this.canvas.drawNextFrame(this.state.frame + 1, success, error);
+	  this.canvas.drawFrame(this.state.frame + 1, success, error);
+  },
+  getPrevFrame: function() {
+	  console.log("CommentBox.getPrevFrame()");
+	  this.setState({frame: this.state.frame, waiting: true});
+	  
+	  var that = this;
+	  var success = function() {
+		  console.log("CommentBox.getPrevFrame.success");
+		  var state = that.state;
+		  if (state.frame > 1)
+			  state.frame--;
+		  state.waiting = false;
+		  that.setState(state);
+	  }
+	  
+	  var error = function(msg) {
+		  var state = that.state;
+		  state.waiting = false;
+		  this.setState(state);
+		  console.log("CommentBox.getPrevFrame.error " + msg);		  
+	  }
+	  
+	  var newFrame = this.state.frame > 1 ? this.state.frame - 1 : this.state.frame;
+	  this.canvas.drawFrame(newFrame, success, error);
   },
   grabCanvas: function(canvas) {
 	  this.canvas = canvas;
   },
-  grabNextButton: function(button) {
-	  this.nextButton = button;
-  },
   render: function() {
 	console.log("CommentBox.render()");
-	function foobyStyleFunc() {
-		return {colors: ButtonStyles.lightYellow};
-	}
+	var s = {colors: ButtonStyles.lightYellow};
+	var foo = function(){
+		console.log("outer click func");
+	};
+	
+	var toDisable = this.state.frame <= 1 ? [1] : [];
 	  
     return (
       <div className="commentBox">
         <h1>Network</h1>
-        <WaitChangeButton ref={this.grabNextButton} title="Next" onClick={this.getNextFrame} styleFunc={foobyStyleFunc}/>
-        <WaitChangeButton title="Gooby"/>
+        <WaitChangeHPanel titles={["Next", "Prev"]} 
+                          waiting={this.state.waiting}
+                          toDisable={toDisable}
+                          clickFuncs={[this.getNextFrame, this.getPrevFrame]}/>
+        <div style={{clear: "left"}} />
         <MyCanvas ref={this.grabCanvas}/>
       </div>
     );
@@ -113,8 +144,8 @@ var MyCanvas = React.createClass({
 	  return null;
   },
   // gets next frame data from server and draws it
-  drawNextFrame: function(nextFrameNo, success, error) {
-	console.log("MyCanvas.drawNextFrame, nextFrameNo = " + nextFrameNo);
+  drawFrame: function(frameNo, success, error) {
+	console.log("MyCanvas.drawFrame, frameNo = " + frameNo);
     var ctx = this.getContext();
     if (ctx == null) {
     	error("could not get drawing context");
@@ -129,7 +160,7 @@ var MyCanvas = React.createClass({
     	success();
     }
     
-    ajaxGet("/api/nodes?frame=" + nextFrameNo, successFunc, error);
+    ajaxGet("/api/nodes?frame=" + frameNo, successFunc, error);
   },
   render: function() {
     return <div className="myCanvas"/>;
